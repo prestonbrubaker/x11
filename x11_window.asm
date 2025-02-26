@@ -165,12 +165,15 @@ main:
     call XFillRectangle wrt ..plt
     add rsp, 8    ; Cleanup stack
 
+
+.filled_skip_event:
+
     ; Force refresh
     mov rdi, r12
     call XFlush wrt ..plt  ; <=== Forces X11 to refresh
 
 
-.filled_skip_event:
+
 
     mov rax, 35         ; Syscall number for nanosleep
     lea rdi, [rel ts_sec] ; Address of timespec struct
