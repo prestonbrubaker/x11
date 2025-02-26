@@ -73,7 +73,7 @@ main:
     mov rsi, r15
     mov edx, red_color
     call XSetForeground wrt ..plt
-
+    ;-------------------------------------------------------test
 
     xor r10d, r10d
     
