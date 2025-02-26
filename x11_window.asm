@@ -8,6 +8,9 @@ section .data
 section .bss
     buffer resq 1
     buffer2 resq 1
+    x_buffer resq 1
+    y_buffer resq 1
+    toggle resb 1
 
 section .text
 global main
@@ -35,8 +38,8 @@ main:
     mov rsi, r13
     xor edx, edx
     xor ecx, ecx
-    mov r8d, 400
-    mov r9d, 300
+    mov r8d, 900
+    mov r9d, 900
     push 0
     push 0
     push 0
@@ -75,7 +78,13 @@ main:
     call XSetForeground wrt ..plt
 
 
-    xor r10d, r10d
+    xor r10, r10
+    mov r10, 1
+    mov [toggle], r10d
+
+    xor r10, r10
+
+    mov [y_buffer], r10
     
 
 .event_loop:
@@ -92,7 +101,7 @@ main:
     call XNextEvent wrt ..plt
     add rsp, 0x180
 
-.skip_event:
+;.skip_event:
 
     mov rdi, r12
     mov rsi, r15
@@ -105,12 +114,17 @@ main:
     mov rdx, r15  ; GC
     mov ecx, 50   ; X position
     mov r8d, 50   ; Y position
-    mov r9d, 100  ; Base width
-    add r9d, 200
-    push 50       ; Height (must be 8-byte aligned)
+    mov r9d, 800  ; Base width
+    push 800       ; Height (must be 8-byte aligned)
 
     call XFillRectangle wrt ..plt
     add rsp, 8    ; Cleanup stack
+
+
+.skip_event:
+
+    cmp qword [y_buffer], 800
+    je .filled_skip_event
 
 
     mov r10, [buffer2]
@@ -124,11 +138,15 @@ main:
     mov edx, red_color
     xor r10, r10
     mov r10d, [buffer2]
-    mov rax, r10
-    mov r13, 5000
-    mul r13
-    mov r10, rax
-    add rdx, r10
+
+    ;mov rax, r10
+    ;mov r13, 5000
+    ;mul r13
+    ;mov r10, rax
+
+
+
+    ;add rdx, r10
     call XSetForeground wrt ..plt
 
 
@@ -136,11 +154,12 @@ main:
     mov rdi, r12  ; Display*
     mov rsi, r14  ; Window ID
     mov rdx, r15  ; GC
-    mov ecx, 50   ; X position
+    mov ecx, 0   ; X position
     mov r8d, 50   ; Y position
-    mov r9d, 0  ; Base width
+    mov r9d, 50  ; Base width
 
-    add r9d, [buffer]
+    add ecx, [buffer]
+    add r8, [y_buffer]
     push 50       ; Height (must be 8-byte aligned)
 
     call XFillRectangle wrt ..plt
@@ -150,22 +169,58 @@ main:
     mov rdi, r12
     call XFlush wrt ..plt  ; <=== Forces X11 to refresh
 
-    ; Increment rectangle width
-    mov r10d, [buffer]
-    inc r10d
-    mov [buffer], r10d
+
+.filled_skip_event:
 
     mov rax, 35         ; Syscall number for nanosleep
     lea rdi, [rel ts_sec] ; Address of timespec struct
     xor rsi, rsi        ; NULL second argument (ignore remaining time)
     syscall             ; Invoke nanosleep syscall
 
-    cmp r10d, 300
+
+
+    cmp qword [y_buffer], 800
+    je .filled_skip_event
+
+
+    ; Increment rectangle width
+    mov r10, [buffer]
+    mov r11, 100
+    add r10, r11
+    mov [buffer], r10
+
+
+
+
+    cmp r10, 850
     jl .event_loop
-    xor r10d, r10d  ; Reset width
-    mov [buffer], r10d
+    mov r10, [y_buffer]
+    mov r11, 50
+    add r10, r11
+    mov [y_buffer], r10
+    xor r10, r10  ; Reset width
+    mov [buffer], r10
+    
+    mov r10d, [toggle]
 
 
+    cmp r10d, 0
+    je .is_zero
+
+    mov byte [toggle], 0
+    mov byte [buffer], 50
+    xor r10, r10
+
+    jmp .event_loop
+
+.is_zero:
+
+    mov byte [toggle], 1
+
+
+    mov byte [buffer], 100
+
+    xor r10, r10
 
     jmp .event_loop
 
